@@ -69,13 +69,13 @@ In addition to the main workflow, Video-Claw provides three one-shot Pipelines f
 
 | Stage | Demo | Description |
 |---|---|---|
-| Home | <img src="./video-claw-pics/workflow_demo/homepage.png" width="600" /> | Project overview and entry |
-| Script Planning | <img src="./video-claw-pics/workflow_demo/stage-1.png" width="600" /> | Structured script and storyboard generation |
-| Character/Scene Design | <img src="./video-claw-pics/workflow_demo/stage-2.png" width="600" /> | Character and scene style design |
-| Storyboard Planning | <img src="./video-claw-pics/workflow_demo/stage-3.png" width="600" /> | Determining shots and cinematic language |
-| Reference Image Generation | <img src="./video-claw-pics/workflow_demo/stage-4.png" width="600" /> | Generating reference images and stylistic references |
-| Video Generation | <img src="./video-claw-pics/workflow_demo/stage-5.png" width="600" /> | Generating short clips and action transfer |
-| Final Editing | <img src="./video-claw-pics/workflow_demo/stage-6.png" width="600" /> | Composition, dubbing, and final export |
+| Home | <img src="video-claw-pics/workflow_demo/homepage.png" width="600" /> | Project overview and entry |
+| Script Planning | <img src="video-claw-pics/workflow_demo/stage-1.png" width="600" /> | Structured script and storyboard generation |
+| Character/Scene Design | <img src="video-claw-pics/workflow_demo/stage-2.png" width="600" /> | Character and scene style design |
+| Storyboard Planning | <img src="video-claw-pics/workflow_demo/stage-3.png" width="600" /> | Determining shots and cinematic language |
+| Reference Image Generation | <img src="video-claw-pics/workflow_demo/stage-4.png" width="600" /> | Generating reference images and stylistic references |
+| Video Generation | <img src="video-claw-pics/workflow_demo/stage-5.png" width="600" /> | Generating short clips and action transfer |
+| Final Editing | <img src="video-claw-pics/workflow_demo/stage-6.png" width="600" /> | Composition, dubbing, and final export |
 
 ### 🔊 Micro-Drama: deepseek-v4 Shocking Release
 Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
@@ -236,7 +236,7 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| ![WeChat 1](./video-claw-pics/wechat_demo/wechat_1.jpg) | ![WeChat 2](./video-claw-pics/wechat_demo/wechat_2.jpg) | ![WeChat 3](./video-claw-pics/wechat_demo/wechat_3.jpg) | ![WeChat 4](./video-claw-pics/wechat_demo/wechat_4.jpg) |
+| ![WeChat 1](video-claw-pics/wechat_demo/wechat_1.jpg) | ![WeChat 2](video-claw-pics/wechat_demo/wechat_2.jpg) | ![WeChat 3](video-claw-pics/wechat_demo/wechat_3.jpg) | ![WeChat 4](video-claw-pics/wechat_demo/wechat_4.jpg) |
 
 </div>
 </details>
@@ -249,7 +249,7 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 
 | | | | |
 |:---:|:---:|:---:|:---:|
-| ![Feishu 1](./video-claw-pics/feishu_demo/feishu_1.jpg) | ![Feishu 2](./video-claw-pics/feishu_demo/feishu_2.jpg) | ![Feishu 3](./video-claw-pics/feishu_demo/feishu_3.jpg) | ![Feishu 4](./video-claw-pics/feishu_demo/feishu_4.jpg) |
+| ![Feishu 1](video-claw-pics/feishu_demo/feishu_1.jpg) | ![Feishu 2](video-claw-pics/feishu_demo/feishu_2.jpg) | ![Feishu 3](video-claw-pics/feishu_demo/feishu_3.jpg) | ![Feishu 4](video-claw-pics/feishu_demo/feishu_4.jpg) |
 
 </div>
 </details>
@@ -258,9 +258,9 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 
 | Pipeline | Demo | Frontend Entry | Description |
 |---|---|---|---|
-| <div style="white-space:nowrap"><b>Artistic Short Video</b></div> | <img src="./video-claw-pics/pipeline_demo/standard.png" width="600" /> | Sidebar: "Artistic Short Video" | Supports both "Image Montage / Dynamic Video" and "Creative Inspiration / Full Script" modes. The system splits narration by periods, generates an image and voiceover for each segment, then either composes image-based clips or calls an image-to-video model for dynamic segments. Optional title and subtitles are supported. |
-| <div style="white-space:nowrap"><b>Action Transfer</b></div> | <img src="./video-claw-pics/pipeline_demo/action_transfer.png" width="600" /> | Sidebar: "Action Transfer" | Takes a reference image, an action video, and a prompt, then calls a video model with action-transfer capability to generate the result video. |
-| <div style="white-space:nowrap"><b>Digital Human Talking Video</b></div> | <img src="./video-claw-pics/pipeline_demo/digital_human.png" width="600" /> | Sidebar: "Digital Human Talking Video" | Takes a character image and talking script, generates sentence-level speech and digital human video clips, uses the previous clip's tail frame to continue multi-clip generation, and replaces the final video audio with the generated speech. |
+| <div style="white-space:nowrap"><b>Artistic Short Video</b></div> | <img src="video-claw-pics/pipeline_demo/standard.png" width="600" /> | Sidebar: "Artistic Short Video" | Supports both "Image Montage / Dynamic Video" and "Creative Inspiration / Full Script" modes. The system splits narration by periods, generates an image and voiceover for each segment, then either composes image-based clips or calls an image-to-video model for dynamic segments. Optional title and subtitles are supported. |
+| <div style="white-space:nowrap"><b>Action Transfer</b></div> | <img src="video-claw-pics/pipeline_demo/action_transfer.png" width="600" /> | Sidebar: "Action Transfer" | Takes a reference image, an action video, and a prompt, then calls a video model with action-transfer capability to generate the result video. |
+| <div style="white-space:nowrap"><b>Digital Human Talking Video</b></div> | <img src="video-claw-pics/pipeline_demo/digital_human.png" width="600" /> | Sidebar: "Digital Human Talking Video" | Takes a character image and talking script, generates sentence-level speech and digital human video clips, uses the previous clip's tail frame to continue multi-clip generation, and replaces the final video audio with the generated speech. |
 
 ### Artistic Short Video
 
