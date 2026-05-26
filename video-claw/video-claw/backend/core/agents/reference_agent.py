@@ -251,8 +251,9 @@ class ReferenceGeneratorAgent(AgentInterface):
         for version in range(max_versions):
             self._check_cancel()
 
+            style_prompt = self._get_style_prompt(style)
             full_prompt = (
-                f"{style} style, masterpiece, cinematic composition, "
+                f"{style_prompt}, masterpiece, cinematic composition, "
                 f"best quality, high resolution, "
                 f"{first_frame_prompt}"
             )

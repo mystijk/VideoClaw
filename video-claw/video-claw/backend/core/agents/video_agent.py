@@ -101,13 +101,13 @@ class VideoDirectorAgent(AgentInterface):
 
     # ─── 提示词组装 ───
 
-    def _assemble_prompt(self, segment: dict, style: str) -> str:
+    def _assemble_prompt(self, segment: dict, style_prompt: str) -> str:
         """组装视频提示词
         格式：
-        风格控制：用户选择的风格, 电影质感
+        风格控制：用户选择的风格提示词, 电影质感
         分镜列表：分镜1:[时长] content... 分镜2:[时长] content...
         """
-        prompt = f"风格控制：{style}风格, 电影质感\n"
+        prompt = f"风格控制：{style_prompt}\n"
         prompt += "分镜列表："
         
         shots = segment.get("shots", [])
@@ -153,7 +153,7 @@ class VideoDirectorAgent(AgentInterface):
 
     # ─── 预览 / Payload ───
 
-    def _build_preview(self, sid: str, segments: list, scene_map: dict, style_name: str = "") -> list:
+    def _build_preview(self, sid: str, segments: list, scene_map: dict, style_prompt: str = "") -> list:
         preview = []
         for idx, seg in enumerate(segments, 1):
             segment_id = seg["segment_id"]
@@ -165,7 +165,7 @@ class VideoDirectorAgent(AgentInterface):
                 "name": f"第{ep_n}集-片段{seg_n}",
                 "episode": ep_n,
                 "index": seg_n,
-                "description": self._assemble_prompt(seg, style_name),
+                "description": self._assemble_prompt(seg, style_prompt),
                 "duration": seg.get('total_duration', 10),
                 "selected": versions[-1] if versions else "",
                 "versions": versions,
@@ -173,7 +173,7 @@ class VideoDirectorAgent(AgentInterface):
             })
         return preview
 
-    def _build_payload(self, sid: str, segments: list, style_name: str = "") -> dict:
+    def _build_payload(self, sid: str, segments: list, style_prompt: str = "") -> dict:
         clips = []
         for idx, seg in enumerate(segments, 1):
             segment_id = seg["segment_id"]
@@ -185,7 +185,7 @@ class VideoDirectorAgent(AgentInterface):
                 "name": f"第{ep_n}集-片段{seg_n}",
                 "episode": ep_n,
                 "index": seg_n,
-                "description": self._assemble_prompt(seg, style_name),
+                "description": self._assemble_prompt(seg, style_prompt),
                 "duration": seg.get('total_duration', 10),
                 "selected": versions[-1] if versions else "",
                 "versions": versions,
@@ -199,7 +199,7 @@ class VideoDirectorAgent(AgentInterface):
             "stage_completed": True,
         }
 
-    def _update_session_video_data(self, sid: str, segments: list, style_name: str) -> None:
+    def _update_session_video_data(self, sid: str, segments: list, style_prompt: str) -> None:
         """同步视频生成结果到 session.json 的 artifacts 中，适配前端读取"""
         session_path = os.path.join('code/data/sessions', f'{sid}.json')
         if not os.path.exists(session_path):
@@ -209,7 +209,7 @@ class VideoDirectorAgent(AgentInterface):
             with open(session_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            payload = self._build_payload(sid, segments, style_name)
+            payload = self._build_payload(sid, segments, style_prompt)
             data.setdefault("artifacts", {})["video_generation"] = payload["payload"]
             
             # 同时保留一份给后端的 scene2video (如果需要)
@@ -297,6 +297,7 @@ class VideoDirectorAgent(AgentInterface):
             "cyberpunk": "赛博朋克"
         }
         style_name = style_map_zh.get(style_zh, style_zh)
+        style_prompt = self._get_style_prompt(style_zh)
 
         # ═══ 介入：重新生成指定片段 ═══
         if intervention:
@@ -312,7 +313,7 @@ class VideoDirectorAgent(AgentInterface):
                         for seg_id in regen_ids:
                             seg = segment_map.get(seg_id)
                             if not seg: continue
-                            prompt = self._assemble_prompt(seg, style_name)
+                            prompt = self._assemble_prompt(seg, style_prompt)
                             img_path = self._get_reference_image(sid, seg_id, scene_map)
                             duration = seg.get("total_duration", 10)
                             fut = executor.submit(
@@ -352,13 +353,13 @@ class VideoDirectorAgent(AgentInterface):
                 await loop.run_in_executor(None, regen_run)
                 
                 # 同步到 session artifacts
-                self._update_session_video_data(sid, segments, style_name)
+                self._update_session_video_data(sid, segments, style_prompt)
                 
-                return self._build_payload(sid, segments, style_name)
+                return self._build_payload(sid, segments, style_prompt)
 
         # ═══ 正常流程：全量生成 ═══
         self._report_progress("视频生成", "正在准备数据...", 2)
-        preview = self._build_preview(sid, segments, scene_map, style_name)
+        preview = self._build_preview(sid, segments, scene_map, style_prompt)
         self._report_progress("视频生成", "加载视频列表", 5, data={"assets_preview": {"clips": preview}})
 
         def run():
@@ -367,7 +368,7 @@ class VideoDirectorAgent(AgentInterface):
                 seg_id = seg["segment_id"]
                 existing = self._list_versions(sid, seg_id)
                 if existing: continue
-                prompt = self._assemble_prompt(seg, style_name)
+                prompt = self._assemble_prompt(seg, style_prompt)
                 img_path = self._get_reference_image(sid, seg_id, scene_map)
                 duration = seg.get("total_duration", 10)
                 tasks.append((seg_id, prompt, img_path, duration))
@@ -426,7 +427,7 @@ class VideoDirectorAgent(AgentInterface):
         await loop.run_in_executor(None, run)
         
         # 同步到 session artifacts
-        self._update_session_video_data(sid, segments, style_name)
+        self._update_session_video_data(sid, segments, style_prompt)
         
         self._report_progress("视频生成", "完成", 100)
-        return self._build_payload(sid, segments, style_name)
+        return self._build_payload(sid, segments, style_prompt)

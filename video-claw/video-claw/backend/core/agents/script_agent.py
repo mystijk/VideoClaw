@@ -91,14 +91,11 @@ class ScriptWriterAgent(AgentInterface):
                 new_settings = final_data.get("new_settings", [])
                 new_ep_list = final_data.get("new_episodes", [])
                 
-                # 1. 更新第一阶段剧本数据 (内存)
+                # 更新第一阶段剧本数据 (内存)
                 final_data.setdefault("episodes", []).extend(new_ep_list)
                 final_data.setdefault("characters", []).extend(new_chars)
                 final_data.setdefault("settings", []).extend(new_settings)
 
-                # 2. 【优化】移除显式的 _save_result 调用，编排器会根据 payload 自动保存
-
-                # 3. 同步更新跨阶段 artifacts
                 # 创建一个包含增量信息的返回结果，供 Orchestrator 钩子使用
                 result_payload = copy.deepcopy(final_data)
                 result_payload["new_characters"] = new_chars
@@ -108,8 +105,7 @@ class ScriptWriterAgent(AgentInterface):
                 logger.info(f"[ScriptWriter] Confirmed continuation. Providing incremental data to Orchestrator.")
                 return {"payload": result_payload, "requires_intervention": False, "stage_completed": True}
 
-            # 处理 delete_continue
-            # 【优化】移除显式的 _save_result 调用，仅返回清理后的数据
+            # 处理 delete_continue 的情况，直接丢弃新增内容，保持原有剧本数据不变
             for key in ["new_episodes", "new_characters", "new_settings", "sequel_idea"]:
                 final_data.pop(key, None)
             return {"payload": final_data, "requires_intervention": False, "stage_completed": True}
@@ -335,9 +331,6 @@ class ScriptWriterAgent(AgentInterface):
             }
             
             self._save_result(final_json, sid, is_zh)
-            # 【优化】不再需要显式的 _save_result。Orchestrator 会处理 session 的保存。
-            # 如果确实需要一份独立的 script 存档，可以保留最后一次 save_result，
-            # 但为了架构统一，这里我们仅返回 final_json
             _log_progress(100, "剧本结构化解析完成！")
             return final_json
 

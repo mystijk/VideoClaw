@@ -132,10 +132,11 @@ class CharacterDesignerAgent(AgentInterface):
         self._check_cancel()
 
         # 初始提示词
+        style_prompt = self._get_style_prompt(style)
         if asset_type == 'characters':
-            base_prompt = self._char_prompt(name, desc, style, species)
+            base_prompt = self._char_prompt(name, desc, style_prompt, species)
         else:
-            base_prompt = self._setting_prompt(name, desc, style)
+            base_prompt = self._setting_prompt(name, desc, style_prompt)
 
         video_ratio = "16:9"
         resolution = "2K"

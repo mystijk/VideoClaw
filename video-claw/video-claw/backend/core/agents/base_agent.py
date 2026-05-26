@@ -85,6 +85,16 @@ class AgentInterface(ABC):
         self._check_cancel()
         return result
 
+    def _get_style_prompt(self, style_name: str) -> str:
+        """从 prompts/style/{style_name}.txt 读取对应的视觉提示词"""
+        import os
+        style_file = os.path.join('prompts', 'style', f"{style_name}.txt")
+        if os.path.exists(style_file):
+            with open(style_file, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        # Fallback to English style name if file doesn't exist
+        return style_name + " style"
+
     # -------- 抽象方法 --------
 
     @abstractmethod
