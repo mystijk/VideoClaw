@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">
-  Video-Claw: AI Creative Video Production Agent
+  VideoClaw: AI Creative Video Production Agent
 </h1>
 
 <p align="center">
@@ -42,13 +42,11 @@
 
 # 💥 News
 
-- `2026/3/27`: 🎬 AIGC-Claw was officially released, supporting an automated workflow from idea to finished video.
-- `2026/4/6`: 🎭 AIGC-Claw v2 was released, optimized for short drama generation.
-- `2026/4/9`: ♾️ AIGC-Claw v3 was released, adding infinite continuation and customizable plot development.
-- `2026/4/29`: 🧩 Added three one-shot Pipelines: Artistic Short Video, Action Transfer, and Digital Human Talking Video, together with one-click installation.
-- `2026/5/8`: ⚙️ Added WebUI configuration for API keys and default models, with one-click installation support.
-- `2026/5/13`: 🎞️ Integrated Pixelle-Video HTML templates into the Artistic Short Video Pipeline.
-- `2026/5/14`: 🎉 AIGC-Claw has been officially renamed Video-Claw
+- `2026/3/27`: 🎬 VideoClaw was officially released, supporting full workflow automation from idea to video generation, with user intervention and adjustment available at any time.
+- `2026/4/9`: ♾️ VideoClaw was optimized for short dramas, adding infinite continuation and customizable plots.
+- `2026/4/29`: 🧩 Added three features: commentary-style short videos, action transfer, and digital human talking videos.
+- `2026/5/8`: ⚙️ Added WebUI configuration for APIs and default models, with one-click installation support.
+- `2026/5/13`: 🎞️ Integrated Pixelle-Video HTML templates into commentary-style short videos.
 
 
 # 📖 Overview
@@ -57,11 +55,9 @@
   <img src="video-claw-pics/workflow.png" width="100%" />
 </p>
 
-Video-Claw is an AI director system for creative video production. **You only need to provide an idea, a story outline, or even a vague concept. The system will break it down into an executable filmmaking workflow, continuously producing intermediate assets that can be reviewed, confirmed, revised, and delivered, until a complete final video is generated.**
+VideoClaw is an AI director system for creative video production. **You only need to provide an idea, a story outline, or even a vague concept. The system will break it down into an executable filmmaking workflow, continuously producing intermediate assets that can be reviewed, confirmed, revised, and delivered, until a complete final video is generated.**
 
-It is not a one-shot text-to-video tool. It is a full production line covering **script planning -> character and scene design -> storyboard planning -> reference image generation -> video generation -> post-production editing**. Instead of giving you a black-box result, Video-Claw behaves like a collaborative AI directing team: each stage informs the next, and every key node is visible, editable, and extensible.
-
-In addition to the main workflow, Video-Claw provides three one-shot Pipelines for lighter and more direct generation tasks: Artistic Short Video, Action Transfer, and Digital Human Talking Video. Pipeline tasks push progress and artifacts in real time, and generated results plus history records are kept locally for review, deletion, and reuse.
+It is not a one-shot text-to-video tool. It is a full production line covering **script planning -> character and scene design -> storyboard planning -> reference image generation -> video generation -> post-production editing**. Instead of giving you a black-box result, VideoClaw behaves like a collaborative AI directing team: each stage informs the next, and every key node is visible, editable, and extensible.
 
 # 📺 Demos
 
@@ -72,39 +68,15 @@ In addition to the main workflow, Video-Claw provides three one-shot Pipelines f
 
 | Stage | Demo | Description |
 |---|---|---|
-| Home | <img src="video-claw-pics/workflow_demo/homepage.png" width="600" /> | System overview, supporting project history, creation of new projects, and global settings (API Keys and default models). |
-| Script Planning | <img src="video-claw-pics/workflow_demo/stage-1.png" width="600" /> | Enter ideas or outlines to automatically generate structured multi-scene scripts (including narration and dialogue), supporting intelligent plot continuation. |
-| Character/Scene Design | <img src="video-claw-pics/workflow_demo/stage-2.png" width="600" /> | Automatically extract key characteristics of roles and settings from the script to generate consistent style reference art. |
-| Storyboard Planning | <img src="video-claw-pics/workflow_demo/stage-3.png" width="600" /> | Break down each scene into consecutive visual shots, detailing camera angles, action descriptions, and reference content. |
-| Reference Image Generation | <img src="video-claw-pics/workflow_demo/stage-4.png" width="600" /> | Generate high-quality reference images for each shot to precisely control lighting and composition as a key visual benchmark for video generation. |
-| Video Generation | <img src="video-claw-pics/workflow_demo/stage-5.png" width="600" /> | Utilize state-of-the-art video models (e.g., Wan, Kling) to convert shots into dynamic clips, with support for action transfer from external videos. |
-| Final Editing | <img src="video-claw-pics/workflow_demo/stage-6.png" width="600" /> | Automatically aggregate all generated video clips, render TTS voiceovers, add background music and subtitles, and export the final publishable video. |
+| Home | <img src="video-claw-pics/workflow_demo/homepage.png" width="800" /> | Displays the system overview, supports viewing historical projects, creating new projects, and global configuration (API keys and default model settings). This is the starting point of the creation workflow. |
+| Script Planning | <img src="video-claw-pics/workflow_demo/stage-1.png" width="800" /> | Enter a creative title and project synopsis, and the system automatically generates a structured multi-scene script (including narration and dialogue), with support for intelligent continuation of subsequent plots. |
+| Character/Scene Design | <img src="video-claw-pics/workflow_demo/stage-2.png" width="800" /> | Automatically extracts core characteristics of characters and scenes from the script, generating stylistically consistent reference concept art as the visual basis for later storyboard generation. |
+| Storyboard Planning | <img src="video-claw-pics/workflow_demo/stage-3.png" width="800" /> | Breaks each script scene into continuous visual storyboards, specifying camera perspective, action descriptions, and reference content in detail to ensure narrative coherence. |
+| Reference Image Generation | <img src="video-claw-pics/workflow_demo/stage-4.png" width="800" /> | Generates high-quality, high-precision reference base images for each storyboard scene, controlling lighting details and composition as key visual references for video generation. |
+| Video Generation | <img src="video-claw-pics/workflow_demo/stage-5.png" width="800" /> | Calls mainstream high-performance video generation models (such as Wan and Kling) to convert storyboard images into dynamic clips. |
+| Final Editing | <img src="video-claw-pics/workflow_demo/stage-6.png" width="800" /> | Aggregates all generated video clips and exports a publishable final video with one click. |
 
 </details>
-
-### 🔊 Micro-Drama: deepseek-v4 Shocking Release
-Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
-
-<div align="center">
-<table align="center" border="0" cellspacing="0" cellpadding="0" style="border:none; border-collapse:collapse; margin:0 auto;">
-  <tr>
-    <td align="center" valign="bottom" width="25%" style="border:none;"></td>
-    <td align="center" valign="bottom" width="25%" style="border:none;">
-      <video src="https://github.com/user-attachments/assets/627e961e-bd0e-449c-987e-9bae34b669c7" controls width="100%" preload="none"></video>
-      <br><b>▶️ Breaking the Wall</b>
-    </td>
-    <td align="center" valign="bottom" width="25%" style="border:none;">
-      <a href="https://github.com/user-attachments/assets/ebb47cb8-fa9f-4557-b70c-ff6368ee0b6c" target="_blank">
-        <img src="https://github.com/user-attachments/assets/40e3efa4-9923-48ce-bde8-3c7d0f1b6a16" alt="deepseek-v4 cover" width="100%" />
-      </a>
-      <br><b>▶️ Breaking the Wall (Original Quality)</b>
-    </td>
-    <td align="center" valign="bottom" width="25%" style="border:none;"></td>
-  </tr>
-</table>
-</div>
-
-<br>
 
 ### 📱 Series 1: A Programmer Uses OpenClaw to Acquire His Former Company After Being Laid Off (Realistic Short Drama)
 > 8 episodes in total, an underdog story with twists and reversal. The first 6 episodes were generated initially, followed by 2 continued episodes.
@@ -215,7 +187,7 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 
 ### 🎞️ More Demos
 <details>
-<summary>Standalone Micro-Drama Clips</summary>
+<summary><b>More Micro-Drama Clips</b></summary>
 
 <table>
   <tr>
@@ -262,16 +234,17 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 </div>
 </details>
 
-## 🧩 Quick Creation Pipelines
+<!-- 
+## 🧩 Quick Creation
 
 <details>
 <summary><b>Click to view WebUI UI design</b></summary>
 
 | Pipeline | Demo | Frontend Entry | Description |
 |---|---|---|---|
-| <div style="white-space:nowrap"><b>Artistic Short Video</b></div> | <img src="video-claw-pics/pipeline_demo/standard.png" width="600" /> | Sidebar: "Artistic Short Video" | Supports both "Image Montage / Dynamic Video" and "Creative Inspiration / Full Script" modes. The system splits narration by periods, generates an image and voiceover for each segment, then either composes image-based clips or calls an image-to-video model for dynamic segments. Optional title and subtitles are supported. |
-| <div style="white-space:nowrap"><b>Action Transfer</b></div> | <img src="video-claw-pics/pipeline_demo/action_transfer.png" width="600" /> | Sidebar: "Action Transfer" | Takes a reference image, an action video, and a prompt, then calls a video model with action-transfer capability to generate the result video. |
-| <div style="white-space:nowrap"><b>Digital Human Talking Video</b></div> | <img src="video-claw-pics/pipeline_demo/digital_human.png" width="600" /> | Sidebar: "Digital Human Talking Video" | Takes a character image and talking script, generates sentence-level speech and digital human video clips, uses the previous clip's tail frame to continue multi-clip generation, and replaces the final video audio with the generated speech. |
+| Artistic Short Video | <img src="video-claw-pics/pipeline_demo/standard.png" width="600" /> | Sidebar: "Artistic Short Video" | Supports both "Image Montage / Dynamic Video" and "Creative Inspiration / Full Script" modes. The system splits narration by periods, generates an image and voiceover for each segment, then either composes image-based clips or calls an image-to-video model for dynamic segments. Optional title and subtitles are supported. |
+| Action Transfer | <img src="video-claw-pics/pipeline_demo/action_transfer.png" width="600" /> | Sidebar: "Action Transfer" | Takes a reference image, an action video, and a prompt, then calls a video model with action-transfer capability to generate the result video. |
+| Digital Human Talking Video | <img src="video-claw-pics/pipeline_demo/digital_human.png" width="600" /> | Sidebar: "Digital Human Talking Video" | Takes a character image and talking script, generates sentence-level speech and digital human video clips, uses the previous clip's tail frame to continue multi-clip generation, and replaces the final video audio with the generated speech. |
 
 </details>
 
@@ -295,34 +268,7 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 </div>
 
 <br>
-
-### Action Transfer
-
-<div align="center">
-<table align="center" border="0" cellspacing="0" cellpadding="0" style="border:none; border-collapse:collapse; margin:0 auto;">
-  <tr>
-    <td align="center" valign="bottom" width="25%" style="border:none;">
-      <img src="https://github.com/user-attachments/assets/a64edad6-dba3-440b-941c-75931a196ec9" width="100%" />
-      <br><b>🖼️ Input Image (Lemon Rat)</b>
-    </td>
-    <td align="center" valign="bottom" width="25%" style="border:none;">
-      <video src="https://github.com/user-attachments/assets/21ce51bd-fbce-4772-9b8b-08532187f993" controls width="100%" preload="none"></video>
-      <br><b>🎬 Input Reference Video</b>
-    </td>
-    <td align="center" valign="bottom" width="25%" style="border:none;">
-      <video src="https://github.com/user-attachments/assets/5eda5bdf-1180-4803-a6ea-34a7366148fb" controls width="100%" preload="none"></video>
-      <br><b>🚀 Generation Result</b>
-    </td>
-    <td align="center" valign="bottom" width="25%" style="border:none;"></td>
-  </tr>
-</table>
-</div>
-
-<br>
-
-### Digital Human Talking Video
-
-<br>
+ -->
 
 # ✨ Features
 
@@ -331,9 +277,7 @@ Generated with deepseek-v4 + gpt-image-2 + happy-horse-1.0
 | 🎬 **End-to-end generation from idea to final cut** | Connects scripts, characters, storyboards, reference images, video clips, and post-production into one complete workflow, upgrading scattered generation abilities into a full video production pipeline. |
 | 🖼️ **Storyboard-driven controllable creation** | Uses structured scripts, storyboard planning, and reference image generation to make character consistency, shot expression, and visual style more stable and controllable. |
 | ✍️ **Editable, continuable, and regenerable** | Supports intelligent continuation of plots and storyboards, while also allowing character, reference image, and video stages to be edited and regenerated without starting from scratch. |
-| 🧩 **Lightweight Pipeline tasks** | Supports Artistic Short Video, Action Transfer, and Digital Human Talking Video as one-shot tasks for fast image/video shorts, action-transfer videos, and talking-head videos. |
-| 🏷️ **Model capability tag filtering** | Backend model metadata is registered in `models/config_model.py`, and available models are filtered by capability tags such as text, image, video, TTS, and action transfer. |
-| 📡 **Real-time task status and artifact management** | Pipeline pages subscribe to task events for progress and artifacts. History records are grouped by feature and support deleting both task metadata and output folders. |
+| 🧩 **Lightweight Pipeline tasks** | Supports three one-shot tasks: commentary-style short videos, action transfer, and digital human talking videos. They are suitable for batch generation of image/text or dynamic short videos, action-transfer videos, and talking-head videos. |
 | 📲 **Local deployment, multi-platform collaboration, and asset retention** | Supports Web UI, WeChat / Feishu collaboration, OpenClaw Skill integration, and full-chain retention of scripts, images, video clips, and final outputs. |
 
 ---
@@ -535,7 +479,7 @@ models:
   eval: qwen3.5-plus
 ```
 
-`api_providers.common.proxy` is the only proxy address. Each provider decides whether to use it via `enable_proxy`, which is disabled by default, so different model calls in the same process do not pollute each other. Changes to service startup fields such as `server.host` and `server.port` require restarting the backend to fully take effect. API keys, proxy settings, and main-workflow defaults under `models` are read by new project creation and model calls.
+<!-- `api_providers.common.proxy` is the only proxy address. Each provider decides whether to use it via `enable_proxy`, which is disabled by default, so different model calls in the same process do not pollute each other. Changes to service startup fields such as `server.host` and `server.port` require restarting the backend to fully take effect. API keys, proxy settings, and main-workflow defaults under `models` are read by new project creation and model calls. -->
 
 ## API Keys and Model Providers
 
@@ -606,9 +550,7 @@ video-claw/video-claw/backend/code/
 
 # 🙏 Acknowledgments
 
-The idea and design of Video-Claw were inspired by [AutoResearchClaw](https://github.com/aiming-lab/AutoResearchClaw), [huobao-drama](https://github.com/chatfire-AI/huobao-drama), [LibTV](https://www.liblib.tv/), and [libtv-skills](https://github.com/libtv-skills).
-
-[Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video): Video-Claw draws on its Artistic Short Video, Action Transfer, and Digital Human Talking Video Pipelines, as well as its HTML template approach for precise text control in images and videos.
+The idea and design of Video-Claw were inspired by [Pixelle-Video](https://github.com/AIDC-AI/Pixelle-Video), [AutoResearchClaw](https://github.com/aiming-lab/AutoResearchClaw), [huobao-drama](https://github.com/chatfire-AI/huobao-drama), [Flova](https://www.flova.ai), and [libtv-skills](https://github.com/libtv-labs/libtv-skills).
 
 
 # 📚 Related Work
