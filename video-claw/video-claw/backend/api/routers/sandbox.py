@@ -92,7 +92,26 @@ def _convert_output_paths(output_data: dict) -> dict:
     return converted
 
 
-def _add_record(tool: str, model: str, input_data: dict, output_data: dict, files: List[str] = None, record_id: str | None = None) -> str:
+def _converted_result_list(paths: List[str] | None) -> List[str]:
+    """Return generated image paths in the same format used by sandbox history."""
+    converted = _convert_output_paths({"images": paths or []})
+    return converted.get("images", [])
+
+
+def _converted_video_path(path: str | None) -> str:
+    """Return generated video path in the same format used by sandbox history."""
+    converted = _convert_output_paths({"video_path": path or ""})
+    return converted.get("video_path", "")
+
+
+def _add_record(
+    tool: str,
+    model: str,
+    input_data: dict,
+    output_data: dict,
+    files: List[str] = None,
+    record_id: str | None = None,
+) -> str:
     """添加历史记录"""
     with SANDBOX_LOCK:
         record_id = record_id or str(uuid.uuid4().hex[:8])
@@ -304,7 +323,11 @@ async def sandbox_t2i(req: SandboxT2IRequest):
             record_id,
             len(result) if isinstance(result, list) else 0,
         )
-        return {"success": True, "result": result, "record_id": record_id}
+        return {
+            "success": True,
+            "result": _converted_result_list(result if isinstance(result, list) else []),
+            "record_id": record_id,
+        }
     except Exception as e:
         logger.exception("Sandbox T2I failed: model=%s", req.model)
         return {"success": False, "error": str(e)}
@@ -343,7 +366,11 @@ async def sandbox_i2i(req: SandboxI2IRequest):
             record_id,
             len(result) if isinstance(result, list) else 0,
         )
-        return {"success": True, "result": result, "record_id": record_id}
+        return {
+            "success": True,
+            "result": _converted_result_list(result if isinstance(result, list) else []),
+            "record_id": record_id,
+        }
     except Exception as e:
         logger.exception("Sandbox I2I failed: model=%s", req.model)
         return {"success": False, "error": str(e)}
@@ -384,7 +411,12 @@ async def sandbox_video(req: SandboxVideoRequest):
             record_id=task_id,
         )
         logger.info("Sandbox video completed: model=%s record_id=%s video=%s", req.model, record_id, save_path)
-        return {"success": True, "result": result, "video_path": save_path, "record_id": record_id}
+        return {
+            "success": True,
+            "result": result,
+            "video_path": _converted_video_path(save_path),
+            "record_id": record_id,
+        }
     except Exception as e:
         logger.exception("Sandbox video failed: model=%s", req.model)
         return {"success": False, "error": str(e)}
