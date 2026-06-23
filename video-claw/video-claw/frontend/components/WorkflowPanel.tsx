@@ -102,6 +102,7 @@ function mergeAssetUpdateItem(item: any, assetUpdate: any): any {
     versions: assetUpdate.versions
       ? mergeAssetVersions(item.versions, assetUpdate.versions)
       : item.versions,
+    rewrite_result: assetUpdate.rewrite_result ?? item.rewrite_result,
   };
 }
 

@@ -3,7 +3,7 @@
 Doctor agent for generation failures.
 
 The doctor is intentionally not a workflow stage. It is called only at failure
-boundaries to decide whether a prompt can be safely rewritten and retried.
+boundaries to decide whether a prompt can be safely rewrite and retried.
 """
 
 import json
@@ -129,13 +129,13 @@ class DoctorAgent(AgentInterface):
 
     @staticmethod
     def _validate_rewrite(data: Dict[str, Any], original_prompt: str) -> str:
-        rewritten = data.get("rewritten_prompt")
-        if not isinstance(rewritten, str) or not rewritten.strip():
-            raise DoctorOutputError("rewritten_prompt must be a non-empty string")
-        rewritten = rewritten.strip()
-        if rewritten == (original_prompt or "").strip():
-            raise DoctorOutputError("rewritten_prompt must differ from the original prompt")
-        return rewritten
+        rewrite = data.get("rewrite_prompt")
+        if not isinstance(rewrite, str) or not rewrite.strip():
+            raise DoctorOutputError("rewrite_prompt must be a non-empty string")
+        rewrite = rewrite.strip()
+        if rewrite == (original_prompt or "").strip():
+            raise DoctorOutputError("rewrite_prompt must differ from the original prompt")
+        return rewrite
 
     @staticmethod
     def _rule_based_diagnosis(error: str) -> Optional[Dict[str, Any]]:
@@ -293,6 +293,28 @@ class DoctorAgent(AgentInterface):
 
         return None
 
+    @staticmethod
+    def build_rewrite_result(
+        *,
+        stage: str,
+        model: str,
+        original_prompt: str,
+        optimized_prompt: str,
+        error: str,
+        diagnosis: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Build the persisted rewrite record in one place so all stages stay consistent."""
+        return {
+            "stage": stage,
+            "model": model,
+            "error": error,
+            "original_prompt": original_prompt,
+            "optimized_prompt": optimized_prompt,
+            "doctor_reason_type": diagnosis.get("reason_type", REASON_TYPE_UNKNOWN),
+            "doctor_reason": diagnosis.get("reason", ""),
+            "confidence": diagnosis.get("confidence", 0.0),
+        }
+
     def maybe_rewrite_prompt(
         self,
         *,
@@ -301,8 +323,8 @@ class DoctorAgent(AgentInterface):
         prompt: str,
         error: str,
         context: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[Optional[str], Dict[str, Any]]:
-        """Return a rewritten prompt when doctor finds a safe rewrite path."""
+    ) -> Tuple[Optional[str], Dict[str, Any], Optional[Dict[str, Any]]]:
+        """Return a rewrite prompt when doctor finds a safe rewrite path."""
         try:
             diagnosis = self.diagnose_error(
                 stage=stage,
@@ -312,15 +334,24 @@ class DoctorAgent(AgentInterface):
                 context=context,
             )
             if diagnosis.get("tool") != "rewrite_prompt" or not diagnosis.get("should_retry"):
-                return None, diagnosis
-            rewritten = self.rewrite_prompt(
+                return None, diagnosis, None
+            rewrite = self.rewrite_prompt(
                 prompt=prompt,
                 reason=diagnosis["reason"],
                 reason_type=diagnosis["reason_type"],
                 stage=stage,
                 context=context,
             )
-            return rewritten, diagnosis
+            if not rewrite:
+                return None, diagnosis, None
+            return rewrite, diagnosis, self.build_rewrite_result(
+                stage=stage,
+                model=model,
+                original_prompt=prompt,
+                optimized_prompt=rewrite,
+                error=error,
+                diagnosis=diagnosis,
+            )
         except Exception as exc:
             logger.warning("Doctor failed and will be skipped: %s", exc, exc_info=True)
-            return None, self.no_action(f"doctor 执行失败，跳过自动修复: {exc}")
+            return None, self.no_action(f"doctor 执行失败，跳过自动修复: {exc}"), None

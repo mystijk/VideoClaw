@@ -8,6 +8,7 @@ import { uploadArtifactImage } from '@/lib/workflowApi';
 import StageActions from './StageActions';
 import StageProgress from './StageProgress';
 import ImageLightbox from './ImageLightbox';
+import RewriteResultBadge, { type RewriteResult } from './RewriteResultBadge';
 
 /* ─── 类型 ─── */
 interface AssetVersion {
@@ -17,6 +18,7 @@ interface AssetVersion {
   selected: string;       // 当前选中的文件路径
   versions: string[];     // 所有历史版本路径
   status?: 'pending' | 'done' | 'failed' | 'running';  // 生成状态
+  rewrite_result?: RewriteResult;
 }
 
 /* ─── 水平滚动图片画廊 ─── */
@@ -172,6 +174,7 @@ function AssetRow({
       {/* 左侧: 描述 */}
       <div className="w-full xl:w-80 xl:flex-shrink-0 p-4 border-b xl:border-b-0 xl:border-r border-gray-100 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
+          <RewriteResultBadge rewriteResult={asset.rewrite_result} />
           {type === 'character'
             ? <Users className="w-3.5 h-3.5 text-violet-500" />
             : <MapPin className="w-3.5 h-3.5 text-emerald-500" />

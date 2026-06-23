@@ -850,14 +850,19 @@ class WorkflowEngine:
                             item.get("versions"),
                             asset_update.get("versions"),
                         )
+                    if "rewrite_result" in asset_update:
+                        item["rewrite_result"] = copy.deepcopy(asset_update["rewrite_result"])
                     return
 
-            items.append({
+            new_item = {
                 "id": item_id,
                 "status": asset_update.get("status", "done"),
                 "selected": asset_update.get("selected", ""),
                 "versions": asset_update.get("versions", []),
-            })
+            }
+            if "rewrite_result" in asset_update:
+                new_item["rewrite_result"] = copy.deepcopy(asset_update["rewrite_result"])
+            items.append(new_item)
 
         def wrapped_progress_callback(phase: str, step: str, percent: float, data: dict = None):
             with self._state_lock:

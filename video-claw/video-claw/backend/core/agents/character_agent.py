@@ -128,6 +128,17 @@ class CharacterDesignerAgent(AgentInterface):
             "status": status,
         }
 
+    @staticmethod
+    def _collect_rewrite_results(artifact: dict) -> dict:
+        rewrite_results = {"characters": {}, "settings": {}}
+        if not isinstance(artifact, dict):
+            return rewrite_results
+        for key in ("characters", "settings"):
+            for item in artifact.get(key, []) if isinstance(artifact.get(key), list) else []:
+                if isinstance(item, dict) and item.get("id") and item.get("rewrite_result"):
+                    rewrite_results[key][item["id"]] = item["rewrite_result"]
+        return rewrite_results
+
     # ─── 图片生成 ───
 
     def _generate_image_with_doctor(self, img_client, *, prompt: str, model: str,
@@ -137,28 +148,28 @@ class CharacterDesignerAgent(AgentInterface):
             paths = img_client.generate_image(prompt=prompt, model=model, **kwargs)
             if not paths:
                 raise RuntimeError("Image generation returned no output")
-            return paths, prompt
+            return paths, prompt, None
         except Exception as exc:
             from .doctor_agent import DoctorAgent
 
             doctor = DoctorAgent(llm_model=llm_model)
-            rewritten, diagnosis = doctor.maybe_rewrite_prompt(
+            rewrite, diagnosis, rewrite_result = doctor.maybe_rewrite_prompt(
                 stage="character_design",
                 model=model,
                 prompt=prompt,
                 error=str(exc),
                 context=context,
             )
-            if not rewritten:
+            if not rewrite:
                 logger.info("Doctor skipped character prompt rewrite: %s", diagnosis.get("reason"))
                 raise
 
             logger.info("Doctor rewrote character prompt: reason_type=%s reason=%s",
                         diagnosis.get("reason_type"), diagnosis.get("reason"))
-            paths = img_client.generate_image(prompt=rewritten, model=model, **kwargs)
+            paths = img_client.generate_image(prompt=rewrite, model=model, **kwargs)
             if not paths:
                 raise RuntimeError("Image generation returned no output after doctor rewrite")
-            return paths, rewritten
+            return paths, rewrite, rewrite_result
 
     def _build_preview(self, sid: str, chars_desc: dict, sets_desc: dict) -> dict:
         """构建素材预览列表（含当前状态）用于前端实时显示"""
@@ -215,7 +226,7 @@ class CharacterDesignerAgent(AgentInterface):
             save_dir = os.path.dirname(save_path)
 
             try:
-                paths, current_prompt = self._generate_image_with_doctor(
+                paths, current_prompt, rewrite_result = self._generate_image_with_doctor(
                     img_client,
                     prompt=current_prompt, model=t2i_model,
                     llm_model=llm_model,
@@ -259,7 +270,7 @@ class CharacterDesignerAgent(AgentInterface):
                 # 检查是否需要重新生成
                 if is_acceptable:
                     # 评估通过，返回结果
-                    return asset_id, save_path, eval_result
+                    return asset_id, save_path, eval_result, rewrite_result
                 else:
                     # 评估不通过，记录问题并继续循环
                     current_prompt = self._apply_eval_feedback_to_prompt(base_prompt, eval_result, iteration)
@@ -282,10 +293,15 @@ class CharacterDesignerAgent(AgentInterface):
             )
             if best_path:
                 logger.info(f"[{asset_type}] {name} VLM selected best version: {best_path}")
-                return asset_id, best_path, best_eval
+                return asset_id, best_path, best_eval, best_eval.get("rewrite_result") if isinstance(best_eval, dict) else None
 
         # 没有多个版本或 VLM 选择失败，返回最后一次结果
-        return asset_id, save_path if os.path.exists(save_path) else None, eval_result if 'eval_result' in locals() else None
+        return (
+            asset_id,
+            save_path if os.path.exists(save_path) else None,
+            eval_result if 'eval_result' in locals() else None,
+            rewrite_result if 'rewrite_result' in locals() else None,
+        )
 
     def _evaluate_with_vlm(self, image_path: str, description: str, asset_type: str, vlm_model: str = "qwen3.5-plus") -> dict:
         """使用 VLM 评估生成的图片"""
@@ -462,6 +478,7 @@ class CharacterDesignerAgent(AgentInterface):
             ark_api_key=settings.ARK_API_KEY,
             ark_base_url=settings.ARK_BASE_URL,
         )
+        rewrite_results = self._collect_rewrite_results(self._session_artifact(input_data, "character_design"))
 
         # ═══════════ 介入: 重新生成指定素材 ═══════════
         if intervention:
@@ -570,31 +587,39 @@ class CharacterDesignerAgent(AgentInterface):
                             futs[fut] = (atype, aid, name)
                         for fut in as_completed(futs):
                             atype, aid, fname = futs[fut]
-                            _, result_path, eval_result = fut.result()
+                            _, result_path, eval_result, rewrite_result = fut.result()
                             done += 1
                             pct = 10 + int(85 * done / max(total, 1))
+                            if rewrite_result:
+                                rewrite_results[atype][aid] = rewrite_result
                             if result_path:
                                 versions = self._list_versions(sid, atype, aid)
+                                asset_complete = {
+                                    "type": atype, "id": aid, "status": "done",
+                                    "selected": result_path, "versions": versions,
+                                    "evaluation": eval_result,
+                                }
+                                if rewrite_result:
+                                    asset_complete["rewrite_result"] = rewrite_result
                                 self._report_progress("角色设计", f"完成: {fname}", pct, data={
-                                    "asset_complete": {
-                                        "type": atype, "id": aid, "status": "done",
-                                        "selected": result_path, "versions": versions,
-                                        "evaluation": eval_result,
-                                    }
+                                    "asset_complete": asset_complete
                                 })
                             else:
+                                asset_complete = {
+                                    "type": atype, "id": aid, "status": "failed",
+                                    "selected": "", "versions": [],
+                                }
+                                if rewrite_result:
+                                    asset_complete["rewrite_result"] = rewrite_result
                                 self._report_progress("角色设计", f"失败: {fname}", pct, data={
-                                    "asset_complete": {
-                                        "type": atype, "id": aid, "status": "failed",
-                                        "selected": "", "versions": [],
-                                    }
+                                    "asset_complete": asset_complete
                                 })
 
                 loop = asyncio.get_running_loop()
                 await loop.run_in_executor(None, regen_run)
 
             self._report_progress("角色设计", "完成", 100)
-            return self._build_payload(sid, chars_desc, sets_desc, select_chars, select_sets)
+            return self._build_payload(sid, chars_desc, sets_desc, select_chars, select_sets, rewrite_results)
 
         # ═══════════ 正常流程: 全量首次生成 ═══════════
         self._report_progress("角色设计", "读取剧本数据...", 5)
@@ -661,23 +686,31 @@ class CharacterDesignerAgent(AgentInterface):
 
                 for fut in as_completed(futs):
                     atype, aid, fname = futs[fut]
-                    _, result_path, _ = fut.result()
+                    _, result_path, _, rewrite_result = fut.result()
                     done += 1
                     pct = 10 + int(85 * done / max(total, 1))
+                    if rewrite_result:
+                        rewrite_results[atype][aid] = rewrite_result
                     if result_path:
                         versions = self._list_versions(sid, atype, aid)
+                        asset_complete = {
+                            "type": atype, "id": aid, "status": "done",
+                            "selected": result_path, "versions": versions,
+                        }
+                        if rewrite_result:
+                            asset_complete["rewrite_result"] = rewrite_result
                         self._report_progress("角色设计", f"完成: {fname}", pct, data={
-                            "asset_complete": {
-                                "type": atype, "id": aid, "status": "done",
-                                "selected": result_path, "versions": versions,
-                            }
+                            "asset_complete": asset_complete
                         })
                     else:
+                        asset_complete = {
+                            "type": atype, "id": aid, "status": "failed",
+                            "selected": "", "versions": self._list_versions(sid, atype, aid),
+                        }
+                        if rewrite_result:
+                            asset_complete["rewrite_result"] = rewrite_result
                         self._report_progress("角色设计", f"失败: {fname}", pct, data={
-                            "asset_complete": {
-                                "type": atype, "id": aid, "status": "failed",
-                                "selected": "", "versions": self._list_versions(sid, atype, aid),
-                            }
+                            "asset_complete": asset_complete
                         })
 
             self._report_progress("角色设计", "完成", 100)
@@ -685,27 +718,35 @@ class CharacterDesignerAgent(AgentInterface):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, run)
 
-        return self._build_payload(sid, chars_desc, sets_desc)
+        return self._build_payload(sid, chars_desc, sets_desc, rewrite_results=rewrite_results)
 
     def _build_payload(self, sid: str, chars_desc: dict, sets_desc: dict,
-                       selected_chars: dict = None, selected_sets: dict = None) -> dict:
+                       selected_chars: dict = None, selected_sets: dict = None,
+                       rewrite_results: dict = None) -> dict:
         """构建返回给前端的 payload"""
         selected_chars = selected_chars or {}
         selected_sets = selected_sets or {}
+        rewrite_results = rewrite_results or {"characters": {}, "settings": {}}
 
         characters = []
         for asset_id, info in chars_desc.items():
             desc = info.get("description", "") if isinstance(info, dict) else info
             name = info.get("name", "") if isinstance(info, dict) else ""
             sel = selected_chars.get(asset_id, "")
-            characters.append(self._build_asset_info(sid, 'characters', asset_id, name, desc, sel))
+            item = self._build_asset_info(sid, 'characters', asset_id, name, desc, sel)
+            if rewrite_results.get("characters", {}).get(asset_id):
+                item["rewrite_result"] = rewrite_results["characters"][asset_id]
+            characters.append(item)
 
         settings_list = []
         for asset_id, info in sets_desc.items():
             desc = info.get("description", "") if isinstance(info, dict) else info
             name = info.get("name", "") if isinstance(info, dict) else ""
             sel = selected_sets.get(asset_id, "")
-            settings_list.append(self._build_asset_info(sid, 'settings', asset_id, name, desc, sel))
+            item = self._build_asset_info(sid, 'settings', asset_id, name, desc, sel)
+            if rewrite_results.get("settings", {}).get(asset_id):
+                item["rewrite_result"] = rewrite_results["settings"][asset_id]
+            settings_list.append(item)
 
         # 图片生成完成即为阶段完成，用户选择图片只是更新数据
         return {

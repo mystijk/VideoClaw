@@ -6,6 +6,7 @@ import type { StageViewProps } from './types';
 import { assetUrl } from './utils';
 import StageActions from './StageActions';
 import StageProgress from './StageProgress';
+import RewriteResultBadge, { type RewriteResult } from './RewriteResultBadge';
 
 /* ─── 类型 ─── */
 interface ClipItem {
@@ -17,6 +18,7 @@ interface ClipItem {
   selected: string;       // 当前选中的视频路径
   versions: string[];     // 所有历史版本路径
   status?: 'pending' | 'done' | 'failed' | 'running';
+  rewrite_result?: RewriteResult;
 }
 
 /* ─── 水平滚动视频画廊 ─── */
@@ -163,6 +165,7 @@ function ClipRow({
       {/* 左侧: 描述信息 */}
       <div className="w-full xl:w-80 xl:flex-shrink-0 p-4 border-b xl:border-b-0 xl:border-r border-gray-100 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
+          <RewriteResultBadge rewriteResult={clip.rewrite_result} />
           <span className="flex items-center justify-center h-6 px-1.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold flex-shrink-0 whitespace-nowrap">
             {clip.index ?? clip.id.replace('Scene_', '')}
           </span>

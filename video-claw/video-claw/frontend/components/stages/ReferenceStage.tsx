@@ -8,6 +8,7 @@ import { uploadArtifactImage } from '@/lib/workflowApi';
 import StageActions from './StageActions';
 import StageProgress from './StageProgress';
 import ImageLightbox from './ImageLightbox';
+import RewriteResultBadge, { type RewriteResult } from './RewriteResultBadge';
 
 /* ─── 类型 ─── */
 interface SceneItem {
@@ -18,6 +19,7 @@ interface SceneItem {
   selected: string;       // 当前选中的文件路径
   versions: string[];     // 所有历史版本路径
   status?: 'pending' | 'done' | 'failed' | 'running';
+  rewrite_result?: RewriteResult;
 }
 
 /* ─── 水平滚动图片画廊 ─── */
@@ -177,6 +179,7 @@ function SceneRow({
       {/* 左侧: 提示词 */}
       <div className="w-full xl:w-80 xl:flex-shrink-0 p-4 border-b xl:border-b-0 xl:border-r border-gray-100 flex flex-col">
         <div className="flex items-center gap-2 mb-2">
+          <RewriteResultBadge rewriteResult={scene.rewrite_result} />
           <span className="flex items-center justify-center h-6 px-1.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold flex-shrink-0 whitespace-nowrap">
             {scene.index ?? scene.id.replace('Scene_', '')}
           </span>
