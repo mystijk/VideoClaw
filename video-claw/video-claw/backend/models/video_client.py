@@ -39,16 +39,14 @@ class VideoClient:
         self,
         dashscope_api_key: Optional[str] = None,
         dashscope_base_url: Optional[str] = None,
-        kling_access_key: Optional[str] = None,
-        kling_secret_key: Optional[str] = None,
+        kling_api_key: Optional[str] = None,
         kling_base_url: Optional[str] = None,
         ark_api_key: Optional[str] = None,
         ark_base_url: Optional[str] = None,
     ):
         self._dashscope_api_key = dashscope_api_key or Config.DASHSCOPE_API_KEY
         self._dashscope_base_url = dashscope_base_url or Config.DASHSCOPE_BASE_URL
-        self._kling_access_key = kling_access_key or Config.KLING_ACCESS_KEY
-        self._kling_secret_key = kling_secret_key or Config.KLING_SECRET_KEY
+        self._kling_api_key = kling_api_key or Config.KLING_API_KEY
         self._kling_base_url = kling_base_url or Config.KLING_BASE_URL
         self._ark_api_key = ark_api_key or Config.ARK_API_KEY
         self._ark_base_url = ark_base_url or Config.ARK_BASE_URL
@@ -70,8 +68,7 @@ class VideoClient:
     def kling_client(self):
         if self._kling_client is None:
             self._kling_client = KlingVideoClient(
-                access_key=self._kling_access_key,
-                secret_key=self._kling_secret_key,
+                api_key=self._kling_api_key,
                 base_url=self._kling_base_url,
             )
         return self._kling_client

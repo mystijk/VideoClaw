@@ -19,7 +19,6 @@ import base64
 import logging
 from typing import Optional
 
-import jwt
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -63,37 +62,31 @@ def _build_session(max_retries: int = 3, proxy: str = "") -> requests.Session:
 class KlingVideoClient:
     """
     可灵 AI 图生视频客户端
-    使用 JWT (HMAC-SHA256) 鉴权，调用 /v1/videos/image2video 接口
+    使用 API Key 鉴权，调用 /v1/videos/image2video 接口
     """
 
     def __init__(
         self,
-        access_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
+        api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        token_ttl: int = 1800,
         poll_interval: int = 5,
         max_polls: int = 120,
     ) -> None:
         """
         Args:
-            access_key: 可灵 API Access Key
-            secret_key: 可灵 API Secret Key
+            api_key: 可灵 API Key
             base_url:   可灵 API 基础 URL (默认北京节点)
-            token_ttl:  JWT 有效期（秒），默认 30 分钟
             poll_interval: 轮询间隔（秒）
             max_polls:  最大轮询次数
         """
-        self.access_key = access_key or Config.KLING_ACCESS_KEY
-        self.secret_key = secret_key or Config.KLING_SECRET_KEY
+        self.api_key = api_key or Config.KLING_API_KEY
         self.base_url = (base_url or Config.KLING_BASE_URL).rstrip("/") or KLING_BASE_URL
-        self.token_ttl = token_ttl
         self.poll_interval = poll_interval
         self.max_polls = max_polls
 
-        if not self.access_key or not self.secret_key:
+        if not self.api_key:
             logger.warning(
-                "KlingVideoClient: KLING_ACCESS_KEY / KLING_SECRET_KEY 未设置，请检查配置"
+                "KlingVideoClient: KLING_API_KEY 未设置，请检查配置"
             )
 
         # 使用强制 TLS 1.2 + 自动重试的 Session
@@ -109,34 +102,13 @@ class KlingVideoClient:
             return "std"
         return mode if mode in {"std", "pro"} else "pro"
 
-    # ─── JWT 鉴权 ───
-
-    def _generate_token(self) -> str:
-        """
-        使用 Access Key / Secret Key 生成 JWT Token
-        算法: HS256
-        Payload:
-          - iss: Access Key
-          - iat: 签发时间
-          - exp: 过期时间
-          - nbf: 生效时间
-        """
-        now = int(time.time())
-        payload = {
-            "iss": self.access_key,
-            "iat": now,
-            "exp": now + self.token_ttl,
-            "nbf": now - 5,  # 允许 5 秒时钟偏差
-        }
-        token = jwt.encode(payload, self.secret_key, algorithm="HS256")
-        return token
+    # ─── API Key 鉴权 ───
 
     def _auth_headers(self) -> dict:
-        """构建带 JWT 鉴权的请求头"""
-        token = self._generate_token()
+        """构建带 API Key 鉴权的请求头"""
         return {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {self.api_key}",
         }
 
     # ─── 图片处理 ───
@@ -424,18 +396,17 @@ if __name__ == "__main__":
     SOUND = ""                 # "" = 自动开启, "on", "off"
 
     print("=== 可灵 (Kling) 图生视频测试 ===")
-    ak = Config.KLING_ACCESS_KEY
-    sk = Config.KLING_SECRET_KEY
+    api_key = Config.KLING_API_KEY
     base_url = Config.KLING_BASE_URL
-    if not ak or not sk:
-        print("✗ KLING_ACCESS_KEY / KLING_SECRET_KEY 未设置，请检查 config.yaml 配置")
+    if not api_key:
+        print("✗ KLING_API_KEY 未设置，请检查 config.yaml 配置")
         sys.exit(1)
 
     if not os.path.exists(IMAGE_PATH):
         print(f"✗ 输入图片不存在: {IMAGE_PATH}")
         sys.exit(1)
 
-    print(f"  Access Key : {ak[:6]}***{ak[-4:]}")
+    print(f"  API Key    : {api_key[:6]}***{api_key[-4:]}")
     print(f"  Base URL   : {base_url}")
     print(f"  输入图片   : {IMAGE_PATH}")
     print(f"  输出路径   : {OUTPUT_PATH}")
@@ -448,7 +419,7 @@ if __name__ == "__main__":
     print("-" * 40)
 
     try:
-        client = KlingVideoClient(access_key=ak, secret_key=sk, base_url=base_url)
+        client = KlingVideoClient(api_key=api_key, base_url=base_url)
         print("✓ 客户端初始化成功")
 
         start = time.time()

@@ -30,8 +30,7 @@ api_providers:
     enable_proxy: false
   kling:
     base_url: https://api-beijing.klingai.com
-    access_key: ''
-    secret_key: ''
+    api_key: ''
     enable_proxy: false
 models:
   llm: qwen3.5-plus

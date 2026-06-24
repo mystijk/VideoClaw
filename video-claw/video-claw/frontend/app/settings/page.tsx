@@ -110,8 +110,7 @@ const GROUPS: Array<{ title: string; description: string; fields: Field[] }> = [
     description: '可灵视频生成接口配置。',
     fields: [
       { path: 'api_providers.kling.base_url', label: 'base_url 接口地址' },
-      { path: 'api_providers.kling.access_key', label: 'access_key 访问密钥', type: 'password' },
-      { path: 'api_providers.kling.secret_key', label: 'secret_key 私密密钥', type: 'password' },
+      { path: 'api_providers.kling.api_key', label: 'api_key API 密钥', type: 'password' },
       { path: 'api_providers.kling.enable_proxy', label: 'enable_proxy 启用代理', type: 'boolean' },
     ],
   },

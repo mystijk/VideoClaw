@@ -52,8 +52,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         },
         "kling": {
             "base_url": "https://api-beijing.klingai.com",
-            "access_key": "",
-            "secret_key": "",
+            "api_key": "",
             "enable_proxy": False,
         },
     },
@@ -227,8 +226,7 @@ class Config:
     ARK_API_KEY = _get(CONFIG, "api_providers.ark.api_key")
     ARK_BASE_URL = _get(CONFIG, "api_providers.ark.base_url")
     ARK_ENABLE_PROXY = _get(CONFIG, "api_providers.ark.enable_proxy")
-    KLING_ACCESS_KEY = _get(CONFIG, "api_providers.kling.access_key")
-    KLING_SECRET_KEY = _get(CONFIG, "api_providers.kling.secret_key")
+    KLING_API_KEY = _get(CONFIG, "api_providers.kling.api_key")
     KLING_BASE_URL = _get(CONFIG, "api_providers.kling.base_url")
     KLING_ENABLE_PROXY = _get(CONFIG, "api_providers.kling.enable_proxy")
 
@@ -302,8 +300,7 @@ class Config:
         cls.ARK_API_KEY = _get(clean, "api_providers.ark.api_key")
         cls.ARK_BASE_URL = _get(clean, "api_providers.ark.base_url")
         cls.ARK_ENABLE_PROXY = _get(clean, "api_providers.ark.enable_proxy")
-        cls.KLING_ACCESS_KEY = _get(clean, "api_providers.kling.access_key")
-        cls.KLING_SECRET_KEY = _get(clean, "api_providers.kling.secret_key")
+        cls.KLING_API_KEY = _get(clean, "api_providers.kling.api_key")
         cls.KLING_BASE_URL = _get(clean, "api_providers.kling.base_url")
         cls.KLING_ENABLE_PROXY = _get(clean, "api_providers.kling.enable_proxy")
 
