@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, DragEvent } from 'react';
 import { Sparkles, Image, Video, MessageSquare, Zap, Loader2, Copy, Check, Trash2, X, FolderOpen, Upload, Globe, Hexagon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import type { ModelOption, ProviderGroup } from '@/config/models';
+import { VIDEO_RATIOS, VIDEO_RESOLUTIONS, type ModelOption, type ProviderGroup } from '@/config/models';
 import BrandHeader from '@/components/BrandHeader';
 import { DIRECT_API_BASE, fetchSandboxTasks, uploadMedia } from '@/lib/workflowApi';
 import { fetchModelGroupsByType } from '@/lib/modelRegistry';
@@ -47,6 +47,12 @@ const EMPTY_MODEL_GROUPS: Record<ToolType, ProviderGroup[]> = {
   video: [],
 };
 
+const VIDEO_DURATIONS = [
+  { id: 5, label: '5s' },
+  { id: 10, label: '10s' },
+  { id: 15, label: '15s' },
+];
+
 interface Tool {
   id: ToolType;
   name: string;
@@ -71,6 +77,9 @@ interface HistoryRecord {
     prompt?: string;
     images?: string[];
     reference_image?: string;
+    ratio?: string;
+    resolution?: string;
+    duration?: number;
   };
   output?: {
     response?: string;
@@ -335,6 +344,9 @@ export default function SandboxPage() {
 
   const [selectedModel, setSelectedModel] = useState('');
   const [webSearch, setWebSearch] = useState(false);
+  const [videoRatio, setVideoRatio] = useState('16:9');
+  const [videoResolution, setVideoResolution] = useState('720P');
+  const [videoDuration, setVideoDuration] = useState(5);
 
   // 获取历史记录
   const fetchHistory = async () => {
@@ -378,6 +390,9 @@ export default function SandboxPage() {
     setSelectedModel(record.model);
     setPrompt(record.input.prompt || '');
     setImageUrl(record.input.reference_image || record.input.images?.[0] || '');
+    setVideoRatio(record.input.ratio || '16:9');
+    setVideoResolution(record.input.resolution || '720P');
+    setVideoDuration(Number(record.input.duration) || 5);
     if (record.output?.response) {
       setResult(record.output.response);
     } else {
@@ -418,6 +433,9 @@ export default function SandboxPage() {
       setSelectedModel(activeTask.model);
       setPrompt(activeTask.input?.prompt || '');
       setImageUrl(activeTask.input?.reference_image || activeTask.input?.images?.[0] || '');
+      setVideoRatio(String(activeTask.input?.ratio || '16:9'));
+      setVideoResolution(String(activeTask.input?.resolution || '720P'));
+      setVideoDuration(Number(activeTask.input?.duration) || 5);
       setCurrentOutput(null);
       setResult(null);
       setError(null);
@@ -522,6 +540,9 @@ export default function SandboxPage() {
           // while the FastAPI job still finishes. Call the API server directly.
           apiUrl = `${DIRECT_API_BASE}/api/sandbox/video`;
           body.image = imageUrl;
+          body.ratio = videoRatio;
+          body.resolution = videoResolution;
+          body.duration = videoDuration;
           break;
       }
 
@@ -658,6 +679,47 @@ export default function SandboxPage() {
                   )}
                 </div>
               </div>
+
+              {activeTool === 'video' && (
+                <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-500">分辨率</span>
+                    <select
+                      value={videoResolution}
+                      onChange={e => setVideoResolution(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {VIDEO_RESOLUTIONS.map(item => (
+                        <option key={item.id} value={item.id}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-500">长宽比</span>
+                    <select
+                      value={videoRatio}
+                      onChange={e => setVideoRatio(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {VIDEO_RATIOS.map(item => (
+                        <option key={item.id} value={item.id}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-gray-500">时长</span>
+                    <select
+                      value={videoDuration}
+                      onChange={e => setVideoDuration(Number(e.target.value))}
+                      className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {VIDEO_DURATIONS.map(item => (
+                        <option key={item.id} value={item.id}>{item.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
 
               {/* 图片上传（部分工具需要） */}
               {(activeTool === 'vlm' || activeTool === 'i2i' || activeTool === 'video') && (

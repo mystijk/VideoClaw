@@ -34,3 +34,6 @@ class SandboxVideoRequest(BaseModel):
     model: str
     prompt: str
     image: Optional[str] = None
+    ratio: Optional[str] = "16:9"
+    resolution: Optional[str] = "720P"
+    duration: Optional[int] = 5

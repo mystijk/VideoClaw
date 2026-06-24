@@ -383,14 +383,28 @@ async def sandbox_video(req: SandboxVideoRequest):
     """临时工作台 - 视频生成"""
     from models.video_client import VideoClient
     client = VideoClient()
-    input_data = {"prompt": req.prompt, "reference_image": req.image}
+    duration = int(req.duration or 5)
+    input_data = {
+        "prompt": req.prompt,
+        "reference_image": req.image,
+        "ratio": req.ratio,
+        "resolution": req.resolution,
+        "duration": duration,
+    }
     task_id = _start_active_task("video", req.model, input_data)
     try:
         # 生成唯一的保存路径
         save_dir = os.path.join(SANDBOX_DIR, "videos")
         os.makedirs(save_dir, exist_ok=True)
         save_path = os.path.join(save_dir, f"{uuid.uuid4().hex[:8]}.mp4")
-        logger.info("Sandbox video started: model=%s image=%s", req.model, bool(req.image))
+        logger.info(
+            "Sandbox video started: model=%s image=%s ratio=%s resolution=%s duration=%ss",
+            req.model,
+            bool(req.image),
+            req.ratio,
+            req.resolution,
+            duration,
+        )
 
         result = await run_in_threadpool(
             client.generate_video,
@@ -398,8 +412,10 @@ async def sandbox_video(req: SandboxVideoRequest):
             image_path=req.image or "",
             save_path=save_path,
             model=req.model,
-            duration=5,
+            duration=duration,
             shot_type="multi",
+            video_ratio=req.ratio or "16:9",
+            resolution=req.resolution or "720P",
         )
         # 保存到历史记录
         record_id = _add_record(
