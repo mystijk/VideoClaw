@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Save, X, Code, LayoutList, Users, MapPin, Film, Sparkles, BookOpen, Lightbulb, Target, User, Crosshair, RefreshCw, Palette, Edit3 } from 'lucide-react';
+import { Save, X, Users, MapPin, Film, Sparkles, BookOpen, Lightbulb, Target, User, Crosshair, RefreshCw, Palette, Edit3, Plus, Trash2 } from 'lucide-react';
 import type { StageViewProps } from './types';
 import StageActions from './StageActions';
 import StageProgress from './StageProgress';
@@ -21,10 +21,6 @@ interface ScriptCharacter {
   name: string;
   character_id?: string;
   description: string;
-  personality: string[];
-  motivation?: string;
-  arc_description?: string;
-  role: string;
   age?: string;
   species?: string;
   occupation?: string;
@@ -72,16 +68,6 @@ interface ScriptData {
   [key: string]: any;
 }
 
-/* ─── 角色色彩 ─── */
-const ROLE_COLORS: Record<string, string> = {
-  '主角': 'bg-amber-100 text-amber-700',
-  'protagonist': 'bg-amber-100 text-amber-700',
-  '配角': 'bg-sky-100 text-sky-700',
-  'supporting': 'bg-sky-100 text-sky-700',
-  '背景': 'bg-gray-100 text-gray-500',
-  'background': 'bg-gray-100 text-gray-500',
-};
-
 /* ─── Logline 六要素展示卡 ─── */
 function LoglineSummaryBar({ logline }: { logline: LoglineData }) {
   const items = [
@@ -113,15 +99,10 @@ function LoglineSummaryBar({ logline }: { logline: LoglineData }) {
   );
 }
 
-export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, onRegenerate, onSaveSelections, onUpdateArtifact, showConfirm, isRunning, hasPendingItems, hasNextStageStarted }: StageViewProps) {
+export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, onRegenerate, onUpdateArtifact, showConfirm, isRunning, hasPendingItems, hasNextStageStarted }: StageViewProps) {
   const data: ScriptData = state.artifact || {};
 
   const isLoglinePhase = data.phase === 'logline_selection' || data.phase === 'logline_confirm' || data.phase === 'mode_selection';
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editMode, setEditMode] = useState<'structured' | 'raw'>('structured');
-  const [editData, setEditData] = useState<ScriptData>({});
-  const [rawText, setRawText] = useState('');
 
   const [showSmartContinueDialog, setShowSmartContinueDialog] = useState(false);
   const [smartContinueEpisodes, setSmartContinueEpisodes] = useState<number>(1);
@@ -129,6 +110,21 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
   const [editingEpisodeIndex, setEditingEpisodeIndex] = useState<number | null>(null);
   const [savingEpisodeIndex, setSavingEpisodeIndex] = useState<number | null>(null);
   const [episodeDraft, setEpisodeDraft] = useState<{ title: string; content: string }>({ title: '', content: '' });
+  const [editingCharacterIndex, setEditingCharacterIndex] = useState<number | null>(null);
+  const [savingCharacterIndex, setSavingCharacterIndex] = useState<number | null>(null);
+  const [characterDraft, setCharacterDraft] = useState({
+    name: '',
+    species: '',
+    description: '',
+  });
+  const [editingSettingIndex, setEditingSettingIndex] = useState<number | null>(null);
+  const [savingSettingIndex, setSavingSettingIndex] = useState<number | null>(null);
+  const [settingDraft, setSettingDraft] = useState({ name: '', description: '' });
+  const [deleteMode, setDeleteMode] = useState({
+    characters: false,
+    settings: false,
+    episodes: false,
+  });
 
   const handleSmartContinueConfirm = useCallback(() => {
     onIntervene({
@@ -143,37 +139,116 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
 
   const hasContent = Boolean(data.title || data.characters?.length || data.scenes?.length);
 
-  const startEdit = useCallback(() => {
-    setEditData(JSON.parse(JSON.stringify(data)));
-    setRawText(JSON.stringify(data, null, 2));
-    setIsEditing(true);
-    setEditMode('structured');
-  }, [data]);
-
-  const switchEditMode = useCallback((mode: 'structured' | 'raw') => {
-    if (mode === 'raw') {
-      setRawText(JSON.stringify(editData, null, 2));
-    } else {
-      try { setEditData(JSON.parse(rawText)); } catch { /* keep current */ }
-    }
-    setEditMode(mode);
-  }, [editData, rawText]);
-
-  const handleSave = useCallback(() => {
-    let finalData: ScriptData;
-    if (editMode === 'raw') {
-      try { finalData = JSON.parse(rawText); } catch { return; }
-    } else {
-      finalData = editData;
-    }
-    onIntervene({ modified_script: finalData });
-    setIsEditing(false);
-  }, [editMode, rawText, editData, onIntervene]);
-
-  const cancelEdit = useCallback(() => setIsEditing(false), []);
-
   const getEpisodeNumber = (ep: ScriptEpisode, index: number) =>
     Number(ep.episode_number || ep.act_number || index + 1);
+
+  const patchScriptArtifact = async (patch: Record<string, any>) => {
+    if (!sessionId) throw new Error('缺少会话 ID');
+    const response = await fetch(`/api/project/${sessionId}/artifact/script_generation`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) throw new Error('保存剧本修改失败');
+    return response.json();
+  };
+
+  const toggleDeleteMode = (key: keyof typeof deleteMode) => {
+    setDeleteMode(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const createCharacter = async () => {
+    const nextCharacter: ScriptCharacter = {
+      name: '新角色',
+      species: '',
+      description: '请填写角色描述。',
+    };
+    const nextCharacters = [...(data.characters || []), nextCharacter];
+    try {
+      const result = await patchScriptArtifact({ characters: nextCharacters });
+      const characters = result.artifact?.characters || nextCharacters;
+      onUpdateArtifact?.({ characters });
+      startCharacterEdit(characters[characters.length - 1], characters.length - 1);
+    } catch (error) {
+      console.error('新建角色失败:', error);
+    }
+  };
+
+  const deleteCharacter = async (index: number) => {
+    const target = data.characters?.[index];
+    if (!target || !window.confirm(`确认删除角色「${target.name || index + 1}」吗？`)) return;
+    try {
+      const nextCharacters = (data.characters || []).filter((_, itemIndex) => itemIndex !== index);
+      const result = await patchScriptArtifact({ characters: nextCharacters });
+      onUpdateArtifact?.({ characters: result.artifact?.characters || nextCharacters });
+      if (editingCharacterIndex === index) cancelCharacterEdit();
+    } catch (error) {
+      console.error('删除角色失败:', error);
+    }
+  };
+
+  const createSetting = async () => {
+    const nextSetting: ScriptSetting = {
+      name: '新场景',
+      description: '请填写场景描述。',
+    };
+    const nextSettings = [...(data.settings || []), nextSetting];
+    try {
+      const result = await patchScriptArtifact({ settings: nextSettings });
+      const settings = result.artifact?.settings || nextSettings;
+      onUpdateArtifact?.({ settings });
+      startSettingEdit(settings[settings.length - 1], settings.length - 1);
+    } catch (error) {
+      console.error('新建场景失败:', error);
+    }
+  };
+
+  const deleteSetting = async (index: number) => {
+    const target = data.settings?.[index];
+    if (!target || !window.confirm(`确认删除场景「${target.name || index + 1}」吗？`)) return;
+    try {
+      const nextSettings = (data.settings || []).filter((_, itemIndex) => itemIndex !== index);
+      const result = await patchScriptArtifact({ settings: nextSettings });
+      onUpdateArtifact?.({ settings: result.artifact?.settings || nextSettings });
+      if (editingSettingIndex === index) cancelSettingEdit();
+    } catch (error) {
+      console.error('删除场景失败:', error);
+    }
+  };
+
+  const createEpisode = async () => {
+    const nextNumber = (data.episodes || []).reduce((max, ep, index) => {
+      return Math.max(max, getEpisodeNumber(ep, index));
+    }, 0) + 1;
+    const nextEpisode: ScriptEpisode = {
+      act_number: nextNumber,
+      episode_number: nextNumber,
+      act_title: '新剧集',
+      content: '请填写本集剧情。',
+    };
+    const nextEpisodes = [...(data.episodes || []), nextEpisode];
+    try {
+      const result = await patchScriptArtifact({ episodes: nextEpisodes });
+      const episodes = result.artifact?.episodes || nextEpisodes;
+      onUpdateArtifact?.({ episodes });
+      startEpisodeEdit(episodes[episodes.length - 1], episodes.length - 1);
+    } catch (error) {
+      console.error('新建分集失败:', error);
+    }
+  };
+
+  const deleteEpisode = async (index: number) => {
+    const target = data.episodes?.[index];
+    if (!target || !window.confirm(`确认删除第 ${getEpisodeNumber(target, index)} 集「${target.act_title || ''}」吗？`)) return;
+    try {
+      const nextEpisodes = (data.episodes || []).filter((_, itemIndex) => itemIndex !== index);
+      const result = await patchScriptArtifact({ episodes: nextEpisodes });
+      onUpdateArtifact?.({ episodes: result.artifact?.episodes || nextEpisodes });
+      if (editingEpisodeIndex === index) cancelEpisodeEdit();
+    } catch (error) {
+      console.error('删除分集失败:', error);
+    }
+  };
 
   const startEpisodeEdit = (ep: ScriptEpisode, index: number) => {
     setEditingEpisodeIndex(index);
@@ -201,17 +276,7 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
           content: episodeDraft.content,
         };
       });
-      const response = await fetch(`/api/project/${sessionId}/artifact/script_generation`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          episodes: nextEpisodes,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error('保存分集剧本失败');
-      }
-      const result = await response.json();
+      const result = await patchScriptArtifact({ episodes: nextEpisodes });
       if (result.artifact?.episodes) {
         onUpdateArtifact?.({ episodes: result.artifact.episodes });
       }
@@ -223,28 +288,88 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
     }
   };
 
-  /* ─── 编辑辅助 ─── */
-  const updateField = (field: string, value: any) => setEditData(prev => ({ ...prev, [field]: value }));
-
-  const updateCharacter = (idx: number, patch: Partial<ScriptCharacter>) => {
-    setEditData(prev => ({
-      ...prev,
-      characters: prev.characters?.map((c, i) => i === idx ? { ...c, ...patch } : c),
-    }));
+  const startCharacterEdit = (character: ScriptCharacter, index: number) => {
+    setEditingCharacterIndex(index);
+    setEditingSettingIndex(null);
+    setCharacterDraft({
+      name: character.name || '',
+      species: character.species || '',
+      description: character.description || '',
+    });
   };
 
-  const updateSetting = (idx: number, patch: Partial<ScriptSetting>) => {
-    setEditData(prev => ({
-      ...prev,
-      settings: prev.settings?.map((s, i) => i === idx ? { ...s, ...patch } : s),
-    }));
+  const cancelCharacterEdit = () => {
+    setEditingCharacterIndex(null);
+    setCharacterDraft({
+      name: '',
+      species: '',
+      description: '',
+    });
   };
 
-  const updateScene = (idx: number, patch: Partial<ScriptScene>) => {
-    setEditData(prev => ({
-      ...prev,
-      scenes: prev.scenes?.map((s, i) => i === idx ? { ...s, ...patch } : s),
-    }));
+  const saveCharacterEdit = async (index: number) => {
+    if (savingCharacterIndex !== null) return;
+    setSavingCharacterIndex(index);
+    try {
+      const nextCharacters = (data.characters || []).map((character, itemIndex) => {
+        if (itemIndex !== index) return character;
+        const restCharacter = { ...(character as ScriptCharacter & Record<string, any>) };
+        delete restCharacter.role;
+        delete restCharacter.personality;
+        delete restCharacter.motivation;
+        delete restCharacter.arc_description;
+        return {
+          ...restCharacter,
+          name: characterDraft.name,
+          species: characterDraft.species,
+          description: characterDraft.description,
+        };
+      });
+      const result = await patchScriptArtifact({ characters: nextCharacters });
+      if (result.artifact?.characters) {
+        onUpdateArtifact?.({ characters: result.artifact.characters });
+      }
+      cancelCharacterEdit();
+    } catch (error) {
+      console.error('保存角色失败:', error);
+    } finally {
+      setSavingCharacterIndex(null);
+    }
+  };
+
+  const startSettingEdit = (setting: ScriptSetting, index: number) => {
+    setEditingSettingIndex(index);
+    setEditingCharacterIndex(null);
+    setSettingDraft({
+      name: setting.name || '',
+      description: setting.description || '',
+    });
+  };
+
+  const cancelSettingEdit = () => {
+    setEditingSettingIndex(null);
+    setSettingDraft({ name: '', description: '' });
+  };
+
+  const saveSettingEdit = async (index: number) => {
+    if (savingSettingIndex !== null) return;
+    setSavingSettingIndex(index);
+    try {
+      const nextSettings = (data.settings || []).map((setting, itemIndex) => (
+        itemIndex === index
+          ? { ...setting, name: settingDraft.name, description: settingDraft.description }
+          : setting
+      ));
+      const result = await patchScriptArtifact({ settings: nextSettings });
+      if (result.artifact?.settings) {
+        onUpdateArtifact?.({ settings: result.artifact.settings });
+      }
+      cancelSettingEdit();
+    } catch (error) {
+      console.error('保存场景失败:', error);
+    } finally {
+      setSavingSettingIndex(null);
+    }
   };
 
   return (
@@ -254,18 +379,6 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
         {/* 标题栏 */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
           <h2 className="text-lg font-semibold text-gray-800">剧本生成</h2>
-          {isEditing && (
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 text-xs">
-              <button onClick={() => switchEditMode('structured')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${editMode === 'structured' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                <LayoutList className="w-3.5 h-3.5" />结构编辑
-              </button>
-              <button onClick={() => switchEditMode('raw')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${editMode === 'raw' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                <Code className="w-3.5 h-3.5" />JSON编辑
-              </button>
-            </div>
-          )}
         </div>
         <p className="text-sm text-gray-500 mb-6">多轮 LLM 交互，生成结构化剧本数据</p>
 
@@ -444,7 +557,7 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
         )}
 
         {/* ===== 查看模式 ===== */}
-        {hasContent && !isEditing && (
+        {hasContent && (
           <div className="space-y-8">
 
             {/* Logline 六要素摘要 */}
@@ -481,63 +594,234 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
             )}
 
             {/* 角色 */}
-            {data.characters && data.characters.length > 0 && (
+            {Array.isArray(data.characters) && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-sm font-semibold text-gray-700">角色 ({data.characters.length})</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">角色</h3>
+                  <button
+                    onClick={createCharacter}
+                    className="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    新建
+                  </button>
+                  <button
+                    onClick={() => toggleDeleteMode('characters')}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      deleteMode.characters
+                        ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                        : 'text-gray-500 bg-gray-100 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    删除
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {data.characters.map((c, i) => (
+                  {data.characters.map((c, i) => {
+                    const isCharacterEditing = editingCharacterIndex === i;
+                    const isCharacterSaving = savingCharacterIndex === i;
+                    return (
                     <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-gray-800">{c.name}</span>
-                        <span className={`px-1.5 py-0.5 text-[10px] rounded ${ROLE_COLORS[c.role] || 'bg-gray-100 text-gray-500'}`}>{c.role}</span>
-                        {c.species && c.species !== '人类' && c.species !== 'human' && (
-                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] rounded">{c.species}</span>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          {isCharacterEditing ? (
+                            <input
+                              value={characterDraft.name}
+                              onChange={e => setCharacterDraft(prev => ({ ...prev, name: e.target.value }))}
+                              className="w-full rounded-lg border border-blue-100 px-2 py-1 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-blue-200"
+                            />
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-gray-800">{c.name}</span>
+                              {c.species && c.species !== '人类' && c.species !== 'human' && (
+                                <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] rounded">{c.species}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {isCharacterEditing ? (
+                          <div className="flex flex-shrink-0 items-center gap-1">
+                            <button
+                              onClick={cancelCharacterEdit}
+                              disabled={isCharacterSaving}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                              <X className="w-3 h-3" />取消
+                            </button>
+                            <button
+                              onClick={() => saveCharacterEdit(i)}
+                              disabled={isCharacterSaving || !characterDraft.name.trim() || !characterDraft.description.trim()}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed"
+                            >
+                              <Save className="w-3 h-3" />{isCharacterSaving ? '保存中' : '保存'}
+                            </button>
+                          </div>
+                        ) : deleteMode.characters ? (
+                          <button
+                            onClick={() => deleteCharacter(i)}
+                            className="flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                            title="删除角色"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => startCharacterEdit(c, i)}
+                            className="flex flex-shrink-0 items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors"
+                          >
+                            <Edit3 className="w-3 h-3" />修改
+                          </button>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 leading-relaxed mb-2">{c.description}</p>
-                      {c.personality && (
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {(Array.isArray(c.personality) ? c.personality : String(c.personality).split(/[,，]/)).map((p: string, pi: number) => (
-                            <span key={pi} className="px-1.5 py-0.5 bg-blue-50 text-blue-500 text-[10px] rounded">{p.trim()}</span>
-                          ))}
+                      {isCharacterEditing ? (
+                        <div className="space-y-2">
+                          <label className="flex flex-col gap-1 text-xs">
+                            <span className="text-gray-500 font-medium">物种/类型</span>
+                            <input
+                              value={characterDraft.species}
+                              onChange={e => setCharacterDraft(prev => ({ ...prev, species: e.target.value }))}
+                              className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-200"
+                            />
+                          </label>
+                          <label className="flex flex-col gap-1 text-xs">
+                            <span className="text-gray-500 font-medium">描述</span>
+                            <textarea
+                              value={characterDraft.description}
+                              onChange={e => setCharacterDraft(prev => ({ ...prev, description: e.target.value }))}
+                              rows={3}
+                              className="resize-y rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-200"
+                            />
+                          </label>
                         </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 leading-relaxed mb-2">{c.description}</p>
                       )}
-                      {c.motivation && <p className="text-xs text-gray-400"><span className="text-gray-500 font-medium">动机:</span> {c.motivation}</p>}
-                      {c.arc_description && <p className="text-xs text-gray-400"><span className="text-gray-500 font-medium">成长:</span> {c.arc_description}</p>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
 
             {/* 场景设置 */}
-            {data.settings && data.settings.length > 0 && (
+            {Array.isArray(data.settings) && (
               <section>
                 <div className="flex items-center gap-2 mb-3">
                   <MapPin className="w-4 h-4 text-green-500" />
-                  <h3 className="text-sm font-semibold text-gray-700">场景 ({data.settings.length})</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">场景</h3>
+                  <button
+                    onClick={createSetting}
+                    className="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    新建
+                  </button>
+                  <button
+                    onClick={() => toggleDeleteMode('settings')}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      deleteMode.settings
+                        ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                        : 'text-gray-500 bg-gray-100 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    删除
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {data.settings.map((s, i) => (
+                  {data.settings.map((s, i) => {
+                    const isSettingEditing = editingSettingIndex === i;
+                    const isSettingSaving = savingSettingIndex === i;
+                    return (
                     <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
-                      <div className="font-medium text-gray-800 mb-1">{s.name}</div>
-                      <p className="text-sm text-gray-500 leading-relaxed">{s.description}</p>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        {isSettingEditing ? (
+                          <input
+                            value={settingDraft.name}
+                            onChange={e => setSettingDraft(prev => ({ ...prev, name: e.target.value }))}
+                            className="min-w-0 flex-1 rounded-lg border border-green-100 px-2 py-1 text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-green-200"
+                          />
+                        ) : (
+                          <div className="font-medium text-gray-800">{s.name}</div>
+                        )}
+                        {isSettingEditing ? (
+                          <div className="flex flex-shrink-0 items-center gap-1">
+                            <button
+                              onClick={cancelSettingEdit}
+                              disabled={isSettingSaving}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                              <X className="w-3 h-3" />取消
+                            </button>
+                            <button
+                              onClick={() => saveSettingEdit(i)}
+                              disabled={isSettingSaving || !settingDraft.name.trim() || !settingDraft.description.trim()}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed"
+                            >
+                              <Save className="w-3 h-3" />{isSettingSaving ? '保存中' : '保存'}
+                            </button>
+                          </div>
+                        ) : deleteMode.settings ? (
+                          <button
+                            onClick={() => deleteSetting(i)}
+                            className="flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                            title="删除场景"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => startSettingEdit(s, i)}
+                            className="flex flex-shrink-0 items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 transition-colors"
+                          >
+                            <Edit3 className="w-3 h-3" />修改
+                          </button>
+                        )}
+                      </div>
+                      {isSettingEditing ? (
+                        <textarea
+                          value={settingDraft.description}
+                          onChange={e => setSettingDraft(prev => ({ ...prev, description: e.target.value }))}
+                          rows={4}
+                          className="w-full resize-y rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-green-200"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-500 leading-relaxed">{s.description}</p>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
 
             {/* 故事线 */}
-            {data.episodes && data.episodes.length > 0 ? (
+            {Array.isArray(data.episodes) ? (
           <section className="bg-gray-50 p-4 rounded-xl border border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Film className="w-5 h-5 text-purple-500" />
                 <h3 className="text-sm font-bold text-gray-800">分集剧本</h3>
+                <button
+                  onClick={createEpisode}
+                  className="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  新建
+                </button>
+                <button
+                  onClick={() => toggleDeleteMode('episodes')}
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    deleteMode.episodes
+                      ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                      : 'text-gray-500 bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  删除
+                </button>
               </div>
             </div>
             <div className="space-y-6">
@@ -579,6 +863,14 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
                           {isSavingEpisode ? '保存中' : '保存'}
                         </button>
                       </div>
+                    ) : deleteMode.episodes ? (
+                      <button
+                        onClick={() => deleteEpisode(i)}
+                        className="flex items-center justify-center w-8 h-8 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                        title="删除分集"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     ) : (
                       <button
                         onClick={() => startEpisodeEdit(ep, i)}
@@ -678,7 +970,7 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                       {data.new_characters.map((c: any, i: number) => (
                         <div key={i} className="bg-white p-3 rounded-lg border border-amber-100 shadow-sm flex flex-col gap-1">
-                          <div className="font-bold text-amber-900 text-sm">{c.name} <span className="text-[10px] text-amber-600 font-normal bg-amber-100 px-1.5 py-0.5 rounded ml-1">{c.role || '配角'}</span></div>
+                          <div className="font-bold text-amber-900 text-sm">{c.name}</div>
                           <p className="text-[11px] text-gray-600 line-clamp-2 md:line-clamp-none">{c.description}</p>
                         </div>
                       ))}
@@ -736,147 +1028,17 @@ export default function ScriptStage({ state, sessionId, onConfirm, onIntervene, 
           </div>
         )}
 
-        {/* ===== 结构编辑模式 ===== */}
-        {isEditing && editMode === 'structured' && (
-          <div className="space-y-6">
-
-            {/* 基础信息 */}
-            <section className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-violet-500" />基本信息</h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-gray-500 font-medium">标题</span>
-                  <input type="text" value={editData.title || ''} onChange={e => updateField('title', e.target.value)}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none" />
-                </label>
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-gray-500 font-medium">情绪基调</span>
-                  <input type="text" value={editData.mood || ''} onChange={e => updateField('mood', e.target.value)}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none" />
-                </label>
-              </div>
-              <label className="flex flex-col gap-1 text-xs">
-                <span className="text-gray-500 font-medium">Logline (故事大纲)</span>
-                <textarea value={editData.logline || ''} onChange={e => updateField('logline', e.target.value)} rows={4}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none resize-none" />
-              </label>
-            </section>
-
-            {/* 角色编辑 */}
-            {editData.characters && editData.characters.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-3"><Users className="w-4 h-4 text-blue-500" /><h4 className="text-sm font-semibold text-gray-700">角色</h4></div>
-                <div className="space-y-3">
-                  {editData.characters.map((c, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-                      <div className="flex gap-3">
-                        <label className="flex flex-col gap-1 text-xs flex-1"><span className="text-gray-500 font-medium">名字</span>
-                          <input type="text" value={c.name} onChange={e => updateCharacter(i, { name: e.target.value })}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none" /></label>
-                        <label className="flex flex-col gap-1 text-xs w-24"><span className="text-gray-500 font-medium">角色</span>
-                          <select value={c.role} onChange={e => updateCharacter(i, { role: e.target.value })}
-                            className="border border-gray-200 rounded-lg px-2 py-2 text-sm text-gray-700 outline-none">
-                            <option value="主角">主角</option><option value="配角">配角</option><option value="背景">背景</option>
-                          </select></label>
-                      </div>
-                      <label className="flex flex-col gap-1 text-xs"><span className="text-gray-500 font-medium">外貌描述</span>
-                        <textarea value={c.description} onChange={e => updateCharacter(i, { description: e.target.value })} rows={2}
-                          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none resize-none" /></label>
-                      <label className="flex flex-col gap-1 text-xs"><span className="text-gray-500 font-medium">动机</span>
-                        <input type="text" value={c.motivation || ''} onChange={e => updateCharacter(i, { motivation: e.target.value })}
-                          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none" /></label>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* 场景编辑 */}
-            {editData.settings && editData.settings.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-3"><MapPin className="w-4 h-4 text-green-500" /><h4 className="text-sm font-semibold text-gray-700">场景</h4></div>
-                <div className="space-y-3">
-                  {editData.settings.map((s, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
-                      <label className="block text-xs text-gray-500 font-medium mb-1.5">{s.name}</label>
-                      <textarea value={s.description} onChange={e => updateSetting(i, { description: e.target.value })} rows={2}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none resize-none" />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* 故事线编辑 */}
-            {editData.scenes && editData.scenes.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-3"><Film className="w-4 h-4 text-purple-500" /><h4 className="text-sm font-semibold text-gray-700">故事线</h4></div>
-                <div className="space-y-3">
-                  {editData.scenes.map((sc, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex-shrink-0">{sc.scene_number}</span>
-                        <span className="text-xs text-green-600">{sc.location}</span>
-                        <div className="flex flex-wrap gap-1">
-                          {sc.characters.map((c, ci) => <span key={ci} className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full">{c}</span>)}
-                        </div>
-                      </div>
-                      <textarea value={sc.plot} onChange={e => updateScene(i, { plot: e.target.value })} rows={3}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-blue-500/30 outline-none resize-none" />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
-                <Save className="w-4 h-4" />保存修改</button>
-              <button onClick={cancelEdit} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition-colors">
-                <X className="w-4 h-4" />取消</button>
-            </div>
-          </div>
-        )}
-
-        {/* ===== JSON编辑模式 ===== */}
-        {isEditing && editMode === 'raw' && (
-          <div className="space-y-3">
-            <textarea value={rawText} onChange={e => setRawText(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-700 font-mono leading-relaxed resize-none outline-none min-h-[400px] focus:ring-2 focus:ring-blue-500/30" />
-            <div className="flex gap-2">
-              <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
-                <Save className="w-4 h-4" />保存修改</button>
-              <button onClick={cancelEdit} className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm hover:bg-gray-200 transition-colors">
-                <X className="w-4 h-4" />取消</button>
-            </div>
-          </div>
-        )}
-
         {/* 等待状态 */}
         {state.status === 'pending' && (
           <div className="text-center text-gray-400 text-sm py-20">等待生成...</div>
         )}
       </div>
 
-      {!isEditing && !isLoglinePhase && (
+      {!isLoglinePhase && (
         <StageActions
           status={state.status}
           onConfirm={onConfirm}
           showConfirm={showConfirm}
-          onEdit={startEdit}
-          onRegenerate={onRegenerate}
-          stageId="script_generation"
-          hasPendingItems={hasPendingItems}
-          hasNextStageStarted={hasNextStageStarted}
-          isRunning={isRunning}
-        />
-      )}
-      {isEditing && (
-        <StageActions
-          status={state.status}
-          onConfirm={onConfirm}
-          showConfirm={showConfirm}
-          onSave={handleSave}
           onRegenerate={onRegenerate}
           stageId="script_generation"
           hasPendingItems={hasPendingItems}
